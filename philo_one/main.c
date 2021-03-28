@@ -102,7 +102,7 @@ void	printer(int time, int id, char *task)
 // 	unlock
 // }
 
-int		get_time()
+long	get_time()
 {
 	struct timeval	*time;
 
@@ -110,11 +110,29 @@ int		get_time()
 	return (time->tv_sec * 1000 + time->tv_usec);
 }
 
-void	*start_routine(t_phil philos)
+void	eat(t_phil *philos)
 {
-	// eat();
-	// sleep();
-	// think();
+	long time;
+
+	printer(get_time(), philos->id, " has taken a fork\n");
+	pthread_mutex_lock(&(philos->state->forks[philos->lfork]));
+	pthread_mutex_lock(&(philos->state->forks[philos->rfork]));
+	time = get_time();
+	usleep(philos->state->time_to_eat);
+	philos->time_eat += get_time() - time;
+	pthread_mutex_unlock(&(philos->state->forks[philos->lfork]));
+	pthread_mutex_unlock(&(philos->state->forks[philos->rfork]));
+}
+
+
+void	*start_routine(t_phil *philos)
+{
+	while(1)
+	{
+		eat(philos);
+		// sleep();
+		// think();
+	}
 }
 
 int		create_threads(t_state *state)
