@@ -6,7 +6,7 @@
 /*   By: amoussai <amoussai@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/03/20 10:44:51 by amoussai          #+#    #+#             */
-/*   Updated: 2021/03/21 19:03:58 by amoussai         ###   ########.fr       */
+/*   Updated: 2021/04/10 14:45:49 by amoussai         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -80,13 +80,15 @@ int	init_mutexes(t_state *state)
 	return (0);
 }
 
-void	printer(int time, int id, char *task)
+void	printer(long time, t_phil *philos, char *task)
 {
 	//lock
+	pthread_mutex_lock(philos->state->writing);
 	ft_putnbr_fd(time, 1);
 	write(1, " ", 1);
-	ft_putnbr_fd(id, 1);
+	ft_putnbr_fd(philos->id, 1);
 	ft_putstr_fd(task, 1);
+	pthread_mutex_unlock(philos->state->writing);
 	//unlock
 }
 
@@ -105,19 +107,23 @@ void	printer(int time, int id, char *task)
 long	get_time()
 {
 	struct timeval	*time;
-
+	long t;
+	time = (struct timeval*)malloc(sizeof(struct timeval));
 	gettimeofday(time, 0);
-	return (time->tv_sec * 1000 + time->tv_usec);
+	t = time->tv_sec * 1000 + time->tv_usec;
+	free(time);
+	return (t);
 }
 
 void	eat(t_phil *philos)
 {
 	long time;
 
-	printer(get_time(), philos->id, " has taken a fork\n");
+	printer(get_time(), philos, " has taken a fork\n");
 	pthread_mutex_lock(&(philos->state->forks[philos->lfork]));
 	pthread_mutex_lock(&(philos->state->forks[philos->rfork]));
 	time = get_time();
+	printer(time, philos, " is eating\n");
 	usleep(philos->state->time_to_eat);
 	philos->time_eat += get_time() - time;
 	pthread_mutex_unlock(&(philos->state->forks[philos->lfork]));
@@ -125,14 +131,28 @@ void	eat(t_phil *philos)
 }
 
 
-void	*start_routine(t_phil *philos)
+void	ssleep(t_phil *philos)
 {
+	printer(get_time(), philos, " is sleeping\n");
+	usleep(philos->state->time_to_sleep);
+}
+
+void	think(t_phil *philos)
+{
+	printer(get_time(), philos, " is thinking\n");
+	
+}
+
+void	*start_routine(void *philos)
+{
+	t_phil *phil = (t_phil*)philos;
 	while(1)
 	{
-		eat(philos);
-		// sleep();
-		// think();
+		eat(phil);
+		ssleep(phil);
+		think(phil);
 	}
+	return NULL;
 }
 
 int		create_threads(t_state *state)
@@ -158,7 +178,7 @@ int		join_threads(t_state *state)
 	i = 0;
 	while (i < state->nb_philos)
 	{
-		if(pthread_join(&(state->philos[i].tid), NULL) != 0)
+		if(pthread_join(state->philos[i].tid, NULL) != 0)
 			return (1);
 		i++;
 	}

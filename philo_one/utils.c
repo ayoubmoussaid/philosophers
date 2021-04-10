@@ -6,7 +6,7 @@
 /*   By: amoussai <amoussai@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/03/20 10:30:56 by amoussai          #+#    #+#             */
-/*   Updated: 2021/03/21 18:10:51 by amoussai         ###   ########.fr       */
+/*   Updated: 2021/04/10 14:21:05 by amoussai         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -57,17 +57,10 @@ int			ft_atoi(const char *str)
 	return (res * neg);
 }
 
-void		ft_putnbr_fd(int n, int fd)
+void		ft_putnbr_fd(long n, int fd)
 {
-	int reste;
+	long reste;
 
-	if (n == -2147483648)
-	{
-		ft_putchar_fd('-', fd);
-		ft_putchar_fd('2', fd);
-		ft_putnbr_fd(147483648, fd);
-		return ;
-	}
 	if (n < 0)
 	{
 		ft_putchar_fd('-', fd);
