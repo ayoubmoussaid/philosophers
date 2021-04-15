@@ -6,7 +6,7 @@
 #    By: amoussai <amoussai@student.1337.ma>        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2019/09/10 15:30:39 by amoussai          #+#    #+#              #
-#    Updated: 2021/04/10 12:12:51 by amoussai         ###   ########.fr        #
+#    Updated: 2021/04/15 10:17:21 by amoussai         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -16,7 +16,7 @@ SRCS=	main.c utils.c
 
 		
 OBJ=$(SRCS:.c=.o)
-FLAGS=-Wall -Werror -Wextra
+FLAGS=-Wall -Werror -Wextra -lpthread
 CC=gcc
 
 .PHONY: clean bonus fclean all re
