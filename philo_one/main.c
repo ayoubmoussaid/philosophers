@@ -6,7 +6,7 @@
 /*   By: amoussai <amoussai@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/03/20 10:44:51 by amoussai          #+#    #+#             */
-/*   Updated: 2021/04/15 11:23:33 by amoussai         ###   ########.fr       */
+/*   Updated: 2021/04/18 14:05:18 by amoussai         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,7 +35,8 @@ int	init_philos(t_state *state)
 	while (++i < state->nb_philos)
 	{
 		state->philos[i].id = i + 1;
-		state->philos[i].time_take_fork = 0;
+		//state->philos[i].time_take_fork = 0;
+		state->philos[0].is_eating = 0;
 		state->philos[i].time_die = 0;
 		state->philos[i].time_eat = 0;
 		state->philos[i].time_think = 0;
@@ -47,18 +48,18 @@ int	init_philos(t_state *state)
 	}
 	return (0);
 }
+
 int	parse_input(t_state *state, int n, char **tab)
 {
 	state->nb_philos = ft_atoi(tab[1]);
-	state->time_to_die = (long)ft_atoi(tab[2]) * 1000;
-	state->time_to_eat = (long)ft_atoi(tab[3]) * 1000;
-	state->time_to_sleep = (long)ft_atoi(tab[4]) * 1000;
+	state->time_to_die = (long)ft_atoi(tab[2]);
+	state->time_to_eat = (long)ft_atoi(tab[3]);
+	state->time_to_sleep = (long)ft_atoi(tab[4]);
 	if (n == 6)
 		state->nb_time_of_eat = ft_atoi(tab[5]);
 	else
 		state->nb_time_of_eat = -1;
 	state->philos = (t_phil*)malloc(sizeof(t_phil) * state->nb_philos);
-	state->tid = (pthread_t*)malloc(sizeof(pthread_t) * state->nb_philos);
 	state->forks = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t) * state->nb_philos);
 	state->writing = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
 	state->dieing = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
@@ -96,18 +97,6 @@ void	printer(long time, t_phil *philos, char *task, int died)
 	//unlock
 }
 
-// void	print_status(t_phil *philos)
-// {
-// 	lock
-// 	int id = philos->id;
-// 	printer(philos->time_take_fork, id, " has taken a fork\n");
-// 	printer(philos->time_eat, id, " is eating\n");
-// 	printer(philos->time_sleep, id, " is sleeping\n");
-// 	printer(philos->time_think, id, " is thinking\n");
-// 	printer(philos->time_die, id, " died\n");
-// 	unlock
-// }
-
 // void detach_philosophers(t_phil *philos)
 // {
 // 	t_state *state = philos->state;
@@ -133,14 +122,16 @@ long	get_time()
 
 void	eat(t_phil *philos)
 {
-	long time = get_time();
 	pthread_mutex_lock(&(philos->state->forks[philos->lfork]));
 	printer(get_time(), philos, " has taken a fork\n", 0);
 	pthread_mutex_lock(&(philos->state->forks[philos->rfork]));
 	printer(get_time(), philos, " has taken a fork\n", 0);
+	philos->is_eating = 1;
 	philos->time_eat = get_time();
+	philos->time_die = philos->time_eat + philos->state->time_to_die;
 	printer(philos->time_eat, philos, " is eating\n", 0);
-	usleep(philos->state->time_to_eat);
+	usleep(philos->state->time_to_eat * 1000);
+	philos->is_eating = 0;
 	pthread_mutex_unlock(&(philos->state->forks[philos->lfork]));
 	pthread_mutex_unlock(&(philos->state->forks[philos->rfork]));
 }
@@ -148,22 +139,42 @@ void	eat(t_phil *philos)
 
 void	ssleep(t_phil *philos)
 {
-	philos->time_sleep = get_time();
-	philos->time_die += philos->time_sleep - philos->time_eat;
-	printer(philos->time_sleep, philos, " is sleeping\n", 0);
-	usleep(philos->state->time_to_sleep);
+	//philos->time_sleep = get_time();
+	//philos->time_die += philos->time_die + (philos->time_sleep - (philos->time_eat + philos->state->time_to_eat));
+	printer(get_time(), philos, " is sleeping\n", 0);
+	usleep(philos->state->time_to_sleep * 1000);
 }
 
 void	think(t_phil *philos)
 {
-	philos->time_think = get_time();
-	philos->time_die += philos->time_think - philos->time_sleep;
+	//philos->time_think = get_time();
+	//philos->time_die += philos->time_think - philos->time_eat;
 	printer(get_time(), philos, " is thinking\n", 0);
+}
+
+void	*verify_death(void *st)
+{
+	t_phil *philo = (t_phil*)st;
+	while(1)
+	{
+		pthread_mutex_lock(philo->state->dieing);
+		// printer(watcher->state->philos[watcher->index].time_die, &(watcher->state->philos[watcher->index]), " time die\n",0);
+		// printer(watcher->state->time_to_die, &(watcher->state->philos[watcher->index]), " time to die\n",0);
+		if(!philo->is_eating && get_time() > philo->time_die)
+			printer(get_time(), philo, " has died\n", 1);
+		pthread_mutex_unlock(philo->state->dieing);
+		usleep(1000);
+	}
+	return NULL;
 }
 
 void	*start_routine(void *philos)
 {
 	t_phil *phil = (t_phil*)philos;
+	phil->time_die = get_time() + phil->state->time_to_die;
+	if(pthread_create(&(phil->watcher_tid), NULL, &verify_death, philos) != 0)
+		return NULL;
+	pthread_detach(phil->watcher_tid);
 	while(1)
 	{
 		eat(phil);
@@ -173,20 +184,6 @@ void	*start_routine(void *philos)
 	return NULL;
 }
 
-void	*verify_death(void *st)
-{
-	int i;
-	t_state *state = (t_state*)st;
-	i = -1;
-	while(++i < state->nb_philos)
-	{
-		pthread_mutex_lock(state->dieing);
-		if(state->philos[i].time_die >= state->time_to_die)
-			printer(get_time(), &(state->philos[i]), " has died\n", 1);
-		pthread_mutex_unlock(state->dieing);
-	}
-	return NULL;
-}
 
 int		create_threads(t_state *state)
 {
@@ -198,8 +195,9 @@ int		create_threads(t_state *state)
 	{
 		//printf("philos n: %d\n", state->philos[i].id);
 		philos = (void*)&(state->philos[i]);
-		if(pthread_create(&(state->philos[i].tid), NULL, &start_routine, philos) != 0 || pthread_create(&(state->tid[i]), NULL, &verify_death, (void*)state) != 0)
+		if(pthread_create(&(state->philos[i].tid), NULL, &start_routine, philos) != 0)
 			return (1);
+		//pthread_detach(state->philos[i].tid);
 		i++;
 	}
 	return (0);

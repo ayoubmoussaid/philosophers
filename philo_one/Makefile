@@ -6,17 +6,17 @@
 #    By: amoussai <amoussai@student.1337.ma>        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2019/09/10 15:30:39 by amoussai          #+#    #+#              #
-#    Updated: 2021/04/15 10:17:21 by amoussai         ###   ########.fr        #
+#    Updated: 2021/04/18 12:28:50 by amoussai         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
-NAME=philosphers
+NAME=philo_one
 LIBFT=libft.a
 SRCS=	main.c utils.c
 
 		
 OBJ=$(SRCS:.c=.o)
-FLAGS=-Wall -Werror -Wextra -lpthread
+FLAGS=-Wall -Werror -Wextra 
 CC=gcc
 
 .PHONY: clean bonus fclean all re
@@ -24,7 +24,7 @@ CC=gcc
 all: $(NAME)
 
 $(NAME):
-	$(CC) $(FLAGS) -g $(SRCS) -o $(NAME)
+	$(CC) $(FLAGS) -g $(SRCS) -o $(NAME) -lpthread
 
 clean:
 	rm -f $(OBJ)

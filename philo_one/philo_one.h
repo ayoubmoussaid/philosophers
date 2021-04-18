@@ -6,7 +6,7 @@
 /*   By: amoussai <amoussai@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/03/20 10:34:08 by amoussai          #+#    #+#             */
-/*   Updated: 2021/04/15 10:52:51 by amoussai         ###   ########.fr       */
+/*   Updated: 2021/04/18 10:46:45 by amoussai         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,10 +23,12 @@
 typedef struct		s_phil
 {
 	pthread_t		tid;
+	pthread_t		watcher_tid;
 	int				id;
+	int				is_eating;
 	int				lfork;
 	int				rfork;
-	long			time_take_fork;
+	//long			time_take_fork;
 	long			time_die;
 	long			time_eat;
 	long			time_think;
@@ -38,7 +40,6 @@ typedef struct		s_phil
 typedef struct		s_state
 {
 	t_phil			*philos;
-	pthread_t		*tid;
 	pthread_mutex_t	*forks;
 	pthread_mutex_t	*writing;
 	pthread_mutex_t	*dieing;
