@@ -6,7 +6,7 @@
 /*   By: amoussai <amoussai@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/03/20 10:44:51 by amoussai          #+#    #+#             */
-/*   Updated: 2021/04/21 17:03:41 by amoussai         ###   ########.fr       */
+/*   Updated: 2021/04/23 08:17:03 by amoussai         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -84,14 +84,10 @@ int		init_mutexes(t_state *state)
 
 long	get_time()
 {
-	struct timeval	*time;
-	long			t;
+	struct timeval	time;
 
-	time = (struct timeval*)malloc(sizeof(struct timeval));
-	gettimeofday(time, 0);
-	t = time->tv_sec * 1000 + time->tv_usec/1000;
-	free(time);
-	return (t);
+	gettimeofday(&time, 0);
+	return (time.tv_sec * 1000 + time.tv_usec/1000);
 }
 
 void	printer(t_phil *philos, char *task, int died)
@@ -161,7 +157,7 @@ void	*start_routine(void *philos)
 {
 	t_phil		*phil;
 	pthread_t	tid;
-
+	static int	nb = 0;
 	phil = (t_phil*)philos;
 	phil->time_die = get_time() + phil->state->time_to_die;
 	if (pthread_create(&tid, NULL, &verify_death, philos) != 0)
@@ -172,6 +168,9 @@ void	*start_routine(void *philos)
 		if(phil->state->nb_time_of_eat != -1 && phil->nb_time_eat >= phil->state->nb_time_of_eat)
 		{
 			pthread_mutex_lock(&(phil->mutex));
+			nb++;
+			if(nb == phil->state->nb_philos)
+				pthread_mutex_unlock(&(phil->state->dieing));
 			return ((void*)0);
 		}
 		eat(phil);

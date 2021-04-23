@@ -6,11 +6,12 @@
 /*   By: amoussai <amoussai@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/03/20 10:44:51 by amoussai          #+#    #+#             */
-/*   Updated: 2021/04/23 08:59:39 by amoussai         ###   ########.fr       */
+/*   Updated: 2021/04/23 16:23:57 by amoussai         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "philo_one.h"
+int g_max_eat_count = 1;
 
 int		ft_strlen(char *str){
 	int i;
@@ -39,8 +40,6 @@ int		init_philos(t_state *state)
 		state->philos[i].time_die = 0;
 		state->philos[i].time_eat = 0;
 		state->philos[i].nb_time_eat = 0;
-		state->philos[i].lfork = i;
-		state->philos[i].rfork = (i - 1) % (state->nb_philos);
 		state->philos[i].state = state;
 	}
 	return (0);
@@ -61,8 +60,7 @@ int		parse_input(t_state *state, int n, char **tab)
 	state->forks = sem_open(SEM_FORK, O_CREAT | O_EXCL, 0644, state->nb_philos);
 	if (!state->philos || !state->forks)
 		return (1);
-	return (init_philos(state));
-}
+	return (init_philos(state));}
 
 void	make_name(char *name, char *newname, int index)
 {
@@ -71,7 +69,8 @@ void	make_name(char *name, char *newname, int index)
 	i = -1;
 	while(name[++i] != '\0')
 		newname[i] = name[i];
-	//TODO finish here
+	newname[i] = index + '0';
+	newname[i] = '\0';
 }
 
 int		init_mutexes(t_state *state)
@@ -82,14 +81,15 @@ int		init_mutexes(t_state *state)
 	i = 0;
 	while (i < state->nb_philos)
 	{
-		state->philos[i].mutex = sem_open(SEM_PHILO, O_CREAT | O_EXCL, 0644, 1);
+		make_name(SEM_PHILO, (char*)semname, i);
+		sem_unlink(semname);
+		state->philos[i].mutex = sem_open(semname, O_CREAT | O_EXCL, 0644, 1);
 		i++;
 	}
-	//TODO fix this
-	//state->dieing = sem_open();
-	pthread_mutex_init(&(state->writing), NULL);
-	pthread_mutex_init(&(state->dieing), NULL);
-	pthread_mutex_lock(&(state->dieing));
+	sem_unlink(SEM_DEAD);
+	sem_unlink(SEM_WRITE);
+	state->dieing = sem_open(SEM_DEAD, O_CREAT | O_EXCL, 0644, 0);
+	state->writing = sem_open(SEM_WRITE, O_CREAT | O_EXCL, 0644, 1);
 	return (0);
 }
 
@@ -105,7 +105,7 @@ void	printer(t_phil *philos, char *task, int died)
 {
 	static int done = 0;
 	
-	pthread_mutex_lock(&(philos->state->writing));
+	sem_wait(philos->state->writing);
 	if (!done)
 	{
 		ft_putnbr_fd(get_time() - philos->state->start, 1);
@@ -114,37 +114,44 @@ void	printer(t_phil *philos, char *task, int died)
 		write(1, task, ft_strlen(task));
 		if(died)
 		{
-			pthread_mutex_unlock(&(philos->state->dieing));
+			sem_post(philos->state->dieing);
 			done = 1;
 		}
 	}
-	
-	pthread_mutex_unlock(&(philos->state->writing));
+	sem_post(philos->state->writing);
 }
 
-void	eat(t_phil *philos)
+int		eat(t_phil *philos)
 {
-	pthread_mutex_lock(&(philos->state->forks[philos->rfork]));
+	if (sem_wait(philos->state->forks) != 0)
+		return (1);
 	printer(philos, " has taken a fork\n", 0);
-	pthread_mutex_lock(&(philos->state->forks[philos->lfork]));
+	if (sem_wait(philos->state->forks) != 0)
+		return (1);
 	printer(philos, " has taken a fork\n", 0);
-	pthread_mutex_lock(&(philos->mutex));
+	if (sem_wait(philos->mutex) != 0)
+		return (1);
 	philos->is_eating = 1;
 	philos->time_eat = get_time();
 	philos->time_die = philos->time_eat + philos->state->time_to_die;
 	printer(philos, " is eating\n", 0);
 	usleep(philos->state->time_to_eat * 1000);
 	philos->is_eating = 0;
-	pthread_mutex_unlock(&(philos->mutex));
+	if (sem_post(philos->mutex) != 0)
+		return (1);
+	return (0);
 }
 
 
-void	ssleep(t_phil *philos)
+int	ssleep(t_phil *philos)
 {
 	printer(philos, " is sleeping\n", 0);
-	pthread_mutex_unlock(&(philos->state->forks[philos->lfork]));
-	pthread_mutex_unlock(&(philos->state->forks[philos->rfork]));
+	if (sem_post(philos->state->forks) != 0)
+		return (1);
+	if (sem_post(philos->state->forks) != 0)
+		return (1);
 	usleep(philos->state->time_to_sleep * 1000);
+	return (0);
 }
 
 
@@ -155,10 +162,10 @@ void	*verify_death(void *philos)
 	philo = (t_phil*)philos;
 	while (1)
 	{
-		pthread_mutex_lock(&(philo->mutex));
+		sem_wait(philo->mutex);
 		if(!philo->is_eating && get_time() > philo->time_die)
 			printer(philo, " has died\n", 1);
-		pthread_mutex_unlock(&(philo->mutex));
+		sem_post(philo->mutex);
 		usleep(1000);
 	}
 	return ((void*)0);
@@ -178,14 +185,18 @@ void	*start_routine(void *philos)
 	{
 		if(phil->state->nb_time_of_eat != -1 && phil->nb_time_eat >= phil->state->nb_time_of_eat)
 		{
-			pthread_mutex_lock(&(phil->mutex));
+			sem_wait(phil->mutex);
 			nb++;
-			if(nb == phil->state->nb_philos)
-				pthread_mutex_unlock(&(phil->state->dieing));
+			if (nb == phil->state->nb_philos)
+			{
+				sem_post(phil->state->dieing);
+			}	
 			return ((void*)0);
 		}
-		eat(phil);
-		ssleep(phil);
+		if (eat(phil))
+			return ((void*)0);
+		if (ssleep(phil))
+			return ((void*)0);
 		printer(philos, " is thinking\n", 0);
 		phil->nb_time_eat++;
 	}
@@ -219,8 +230,8 @@ int		run_simulation(t_state *state)
 		return (1);
 	if (create_threads(state))
 		return (1);
-	pthread_mutex_lock(&(state->dieing));
-	pthread_mutex_unlock(&(state->dieing));
+	sem_wait(state->dieing);
+	write(1, "check\n", 6);
 	return (0);
 }
 
@@ -229,12 +240,13 @@ void	clear_state(t_state *state)
 	int i;
 
 	i = -1;
-	pthread_mutex_destroy(&state->writing);
-	pthread_mutex_destroy(&state->dieing);
+	sem_close(state->writing);
+	sem_close(state->dieing);
+	sem_close(state->forks);	
 	while(++i < state->nb_philos)
 	{
-		pthread_mutex_destroy(&state->forks[i]);	
-		pthread_mutex_destroy(&state->philos[i].mutex);
+		write(1, "hehe\n", 5);
+		sem_close(state->philos[i].mutex);
 	}
 	free(state->philos);
 }

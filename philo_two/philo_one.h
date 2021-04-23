@@ -6,7 +6,7 @@
 /*   By: amoussai <amoussai@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/03/20 10:34:08 by amoussai          #+#    #+#             */
-/*   Updated: 2021/04/23 08:33:10 by amoussai         ###   ########.fr       */
+/*   Updated: 2021/04/23 16:19:50 by amoussai         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,13 +25,14 @@
 # define SEM_DEAD	"SEM_DEAD"
 # define SEM_PHILO	"SEM_PHILO"
 
+
+
 typedef struct		s_phil
 {
 	sem_t			*mutex;
 	int				id;
 	int				is_eating;
-	int				lfork;
-	int				rfork;
+	int				died;
 	long			time_die;
 	long			time_eat;
 	int				nb_time_eat;
