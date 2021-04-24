@@ -6,13 +6,13 @@
 #    By: amoussai <amoussai@student.1337.ma>        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2019/09/10 15:30:39 by amoussai          #+#    #+#              #
-#    Updated: 2021/04/18 12:28:50 by amoussai         ###   ########.fr        #
+#    Updated: 2021/04/24 13:58:52 by amoussai         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME=philo_one
 LIBFT=libft.a
-SRCS=	main.c utils.c
+SRCS=main.c utils.c eat_sleep.c init.c messages.c
 
 		
 OBJ=$(SRCS:.c=.o)

@@ -6,23 +6,23 @@
 /*   By: amoussai <amoussai@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/03/20 10:30:56 by amoussai          #+#    #+#             */
-/*   Updated: 2021/04/10 14:21:05 by amoussai         ###   ########.fr       */
+/*   Updated: 2021/04/24 14:19:34 by amoussai         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "philo_one.h"
 
-void		ft_putchar_fd(char c, int fd)
+void	ft_putchar_fd(char c, int fd)
 {
 	write(fd, &c, 1);
 }
 
-static char	*ft_isspace(char *str)
+char	*ft_isspace(char *str)
 {
 	while ((*str) != '\0')
 	{
-		if ((*str) == '\t' || (*str) == '\n' || (*str) == '\v' ||
-		(*str) == '\f' || (*str) == '\r' || (*str) == ' ')
+		if ((*str) == '\t' || (*str) == '\n' || (*str) == '\v'
+			|| (*str) == '\f' || (*str) == '\r' || (*str) == ' ')
 			str++;
 		else
 			return (str);
@@ -30,13 +30,13 @@ static char	*ft_isspace(char *str)
 	return (str);
 }
 
-int			ft_atoi(const char *str)
+int	ft_atoi(const char *str)
 {
 	int	res;
 	int	neg;
-	int x;
+	int	x;
 
-	str = ft_isspace((char*)str);
+	str = ft_isspace((char *)str);
 	neg = 1;
 	res = 0;
 	x = 0;
@@ -57,9 +57,9 @@ int			ft_atoi(const char *str)
 	return (res * neg);
 }
 
-void		ft_putnbr_fd(long n, int fd)
+void	ft_putnbr_fd(long n, int fd)
 {
-	long reste;
+	long	reste;
 
 	if (n < 0)
 	{
