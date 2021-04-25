@@ -5,12 +5,12 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: amoussai <amoussai@student.1337.ma>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/04/24 13:50:18 by amoussai          #+#    #+#             */
-/*   Updated: 2021/04/25 07:36:32 by amoussai         ###   ########.fr       */
+/*   Created: 2021/04/24 15:02:01 by amoussai          #+#    #+#             */
+/*   Updated: 2021/04/25 07:36:42 by amoussai         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "philo_one.h"
+#include "philo_two.h"
 
 int	init_philos(t_state *state)
 {
@@ -24,8 +24,6 @@ int	init_philos(t_state *state)
 		state->philos[i].time_die = 0;
 		state->philos[i].time_eat = 0;
 		state->philos[i].nb_time_eat = 0;
-		state->philos[i].lfork = i;
-		state->philos[i].rfork = (i + 1) % (state->nb_philos);
 		state->philos[i].state = state;
 	}
 	return (0);
@@ -46,44 +44,57 @@ int	parse_input(t_state *state, int n, char **tab)
 		|| state->time_to_sleep < 60 || (n == 6 && state->nb_time_of_eat < 1))
 		return (1);
 	state->philos = (t_phil *)malloc(sizeof(t_phil) * state->nb_philos);
-	state->forks = (pthread_mutex_t *)
-		malloc(sizeof(pthread_mutex_t) * state->nb_philos);
+	sem_unlink(SEM_FORK);
+	state->forks = sem_open(SEM_FORK, O_CREAT | O_EXCL, 0644, state->nb_philos);
 	if (!state->philos || !state->forks)
 		return (1);
 	return (init_philos(state));
 }
 
-int	init_mutexes(t_state *state)
+void	make_name(char *name, char *newname, int index)
 {
 	int	i;
+
+	i = -1;
+	while (name[++i] != '\0')
+		newname[i] = name[i];
+	newname[i] = index + '0';
+	newname[i] = '\0';
+}
+
+int	init_mutexes(t_state *state)
+{
+	int		i;
+	char	semname[300];
 
 	i = 0;
 	while (i < state->nb_philos)
 	{
-		if (pthread_mutex_init(&(state->forks[i]), NULL) != 0)
-			return (1);
-		if (pthread_mutex_init(&(state->philos[i].mutex), NULL) != 0)
-			return (1);
+		make_name(SEM_PHILO, (char *)semname, i);
+		sem_unlink(semname);
+		state->philos[i].mutex = sem_open(semname, O_CREAT | O_EXCL, 0644, 1);
 		i++;
 	}
-	pthread_mutex_init(&(state->writing), NULL);
-	pthread_mutex_init(&(state->dieing), NULL);
-	pthread_mutex_lock(&(state->dieing));
+	sem_unlink(SEM_DEAD);
+	sem_unlink(SEM_WRITE);
+	state->dieing = sem_open(SEM_DEAD, O_CREAT | O_EXCL, 0644, 0);
+	state->writing = sem_open(SEM_WRITE, O_CREAT | O_EXCL, 0644, 1);
 	return (0);
 }
 
 void	clear_state(t_state *state)
 {
-	int	i;
+	int		i;
+	char	semname[300];
 
 	i = -1;
-	pthread_mutex_destroy(&state->writing);
-	pthread_mutex_destroy(&state->dieing);
+	sem_unlink(SEM_FORK);
+	sem_unlink(SEM_DEAD);
+	sem_unlink(SEM_WRITE);
 	while (++i < state->nb_philos)
 	{
-		pthread_mutex_destroy(&state->forks[i]);
-		pthread_mutex_destroy(&state->philos[i].mutex);
+		make_name(SEM_PHILO, (char *)semname, i);
+		sem_unlink(semname);
 	}
-	free(state->forks);
 	free(state->philos);
 }
